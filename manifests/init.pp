@@ -37,7 +37,12 @@
 #     Password to use for the proxy server
 #   [*sslca*]
 #     Path to the SSL CA to use.  If needed, it usually looks like
-#     /usr/share/rhn/RHN-ORG-TRUSTED-SSL-CERT
+#     /usr/share/rhn/RHN-ORG-TRUSTED-SSL-CERT. If used with sslca_source
+#     sslca is the path where the CA will be installed.
+#   [*sslca_source*]
+#     Source for the SSL CA certificate - can be any source supported
+#     by the puppet file type. CA file is saved in path given by the sslca
+#     parameter.
 #   [*serverurl*]
 #     URL to the server to register with
 #
@@ -71,6 +76,7 @@ class rhn_register (
   $proxyuser     = undef,
   $proxypass     = undef,
   $sslca         = undef,
+  $sslca_source  = undef,
   $serverurl     = undef,
 ){
   if $::osfamily != 'RedHat' and $::operatingsystem != 'Solaris' {
@@ -79,6 +85,21 @@ class rhn_register (
 
   if $rhn_register::username == undef and $rhn_register::activationkey == undef {
     fail('Either an activation key or username/password is required to register')
+  }
+
+  if $sslca_source {
+    validate_string($sslca_source)
+
+    if $sslca == undef {
+      fail('sslca_source can only be used when sslca is also specified')
+    }
+
+    file { 'rhn-ssl-ca':
+      ensure => present,
+      source => $rhn_register::sslca_source,
+      path   => $rhn_register::sslca,
+      before => Exec['register_with_rhn']
+    }
   }
 
   $profile_name = $rhn_register::profilename ? {

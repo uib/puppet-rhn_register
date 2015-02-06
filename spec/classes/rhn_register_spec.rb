@@ -30,8 +30,40 @@ describe 'rhn_register', :type => 'class' do
       ) }
     end
 
+    context "with an sslca_source specified" do
+      let :params do {
+        :username     => 'test',
+        :password     => 'test',
+        :sslca        => '/usr/share/rhn/RHN-ORG-TRUSTED-SSL-CERT',
+        :sslca_source => 'puppet:///modules/local_files/satellite_ca.crt',
+      } end
+
+      it { should contain_file('rhn-ssl-ca').with(
+        :source => 'puppet:///modules/local_files/satellite_ca.crt',
+        :path   => '/usr/share/rhn/RHN-ORG-TRUSTED-SSL-CERT',
+      ) }
+
+      it { should contain_exec('register_with_rhn').with(
+        :command => '/usr/sbin/rhnreg_ks --username test --password test --sslCACert /usr/share/rhn/RHN-ORG-TRUSTED-SSL-CERT'
+      ) }
+    end
+
+    context "with an sslca_source specified but not sslca" do
+      let :params do {
+        :username     => 'test',
+        :password     => 'test',
+        :sslca_source => 'puppet:///modules/local_files/satellite_ca.crt',
+      } end
+
+      it {
+        should raise_error(Puppet::Error, /sslca_source can only be used when sslca is also specified/)
+      }
+    end
+
     context "without a username/password or activation key supplied" do
-      it { expect { should raise_error(Puppet::Error, /Either an activation key or username\/password is required to register/) }}
+      it {
+        should raise_error(Puppet::Error, /Either an activation key or username\/password is required to register/)
+      }
     end
   end
 
@@ -47,7 +79,8 @@ describe 'rhn_register', :type => 'class' do
       :password => 'test',
     } end
 
-    it { expect { should raise_error(Puppet::Error, /You can't register Ubuntu with RHN or Satellite using this puppet moudle/) }}
-
+    it {
+      should raise_error(Puppet::Error, /Ubuntu with RHN or Satellite using this puppet/)
+    }
   end
 end
